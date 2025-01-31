@@ -7,11 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	api "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
-	interfacesv1 "github.com/deepgram/deepgram-go-sdk/pkg/api/prerecorded/v1/interfaces"
+	interfacesv1 "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest/interfaces"
 	interfaces "github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
 	client "github.com/deepgram/deepgram-go-sdk/pkg/client/listen"
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/spf13/cobra"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -166,7 +169,7 @@ func ProcessFile(dg *api.Client, file FilePath) (*interfacesv1.PreRecordedRespon
 
 	fmt.Printf("Transcript saved to %q\n", transcript)
 
-	return nil, nil
+	return res, nil
 }
 
 var transcribeCmd = &cobra.Command{
@@ -206,6 +209,11 @@ var transcribeCmd = &cobra.Command{
 				return fmt.Errorf("writing SRT file: %w", err)
 			}
 
+			err = CreateGraph(r, fp)
+			if err != nil {
+				return fmt.Errorf("creating graph: %w", err)
+			}
+
 			nWords := 0
 			for _, c := range r.Results.Channels {
 				nWords += len(c.Alternatives[0].Words)
@@ -231,6 +239,55 @@ var transcribeCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func generateWordCountSeries(r *interfacesv1.PreRecordedResponse) []opts.BarData {
+	mins := int(math.Trunc(r.Metadata.Duration/60) + 1)
+	counts := make([]int, mins)
+
+	for _, c := range r.Results.Channels {
+		for _, w := range c.Alternatives[0].Words {
+			minute := int(w.Start / 60)
+			counts[minute]++
+		}
+	}
+
+	items := make([]opts.BarData, mins)
+	for i, c := range counts {
+		items[i] = opts.BarData{Value: c}
+	}
+
+	return items
+}
+
+func generateMinutesSeries(r *interfacesv1.PreRecordedResponse) []int {
+	mins := int(math.Trunc(r.Metadata.Duration/60) + 1)
+	items := make([]int, 0)
+	for i := 0; i < mins; i++ {
+		items = append(items, i)
+	}
+	return items
+}
+
+func CreateGraph(r *interfacesv1.PreRecordedResponse, file FilePath) error {
+
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title: string(file),
+	}))
+
+	bar.SetXAxis(generateMinutesSeries(r)).
+		AddSeries("Words", generateWordCountSeries(r))
+
+	f, err := os.Create(filepath.Join(file.Dir(), file.Base()+"_graph.html"))
+	if err != nil {
+		return fmt.Errorf("creating graph file: %w", err)
+	}
+	err = bar.Render(f)
+	if err != nil {
+		return fmt.Errorf("rendering graph: %w", err)
+	}
+	return nil
 }
 
 func GetCmd(config *config.Config) *cobra.Command {

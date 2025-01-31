@@ -15,6 +15,7 @@ require (
 	github.com/dvonthenen/websocket v1.5.1-dyv.2 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/go-echarts/go-echarts/v2 v2.5.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gorilla/schema v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
