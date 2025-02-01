@@ -89,7 +89,13 @@ func audioForFile(file FilePath) (FilePath, error) {
 		audioPath := FilePath(filepath.Join(file.Dir(), file.Base()+".mp3"))
 
 		fmt.Printf("Converting %q to %q\n", file, audioPath)
-		err := ffmpeg.Input(string(file)).Output(string(audioPath)).OverWriteOutput().ErrorToStdOut().Run()
+		err := ffmpeg.
+			Input(string(file)).
+			Output(string(audioPath)).
+			OverWriteOutput().
+			Silent(true).
+			Run()
+
 		if err != nil {
 			return "", fmt.Errorf("running ffmpeg converting %q to %q: %w", file, audioPath, err)
 		}
