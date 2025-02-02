@@ -206,16 +206,6 @@ var transcribeCmd = &cobra.Command{
 				return fmt.Errorf("processing file %q: %w", file, err)
 			}
 
-			srt, err := r.ToSRT()
-			if err != nil {
-				return fmt.Errorf("converting response to SRT: %w", err)
-			}
-
-			err = os.WriteFile(fp.Base()+".srt", []byte(srt), 0644)
-			if err != nil {
-				return fmt.Errorf("writing SRT file: %w", err)
-			}
-
 			err = CreateGraph(r, fp)
 			if err != nil {
 				return fmt.Errorf("creating graph: %w", err)
