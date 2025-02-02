@@ -151,6 +151,7 @@ func ProcessFile(dg *api.Client, file FilePath) (*interfacesv1.PreRecordedRespon
 		Paragraphs:  true,
 		SmartFormat: true,
 		Language:    "en-US",
+		Diarize:     true,
 		Utterances:  true,
 	}
 
