@@ -193,8 +193,8 @@ var transcribeCmd = &cobra.Command{
 		dg, err := getDgClient(cfg.GetString("apikey"))
 
 		type FileResult struct {
-			File string
-			WPM  float64
+			File string  `json:"file"`
+			WPM  float64 `json:"wpm"`
 		}
 
 		wpms := make([]FileResult, 0, len(files))
@@ -231,17 +231,23 @@ var transcribeCmd = &cobra.Command{
 
 		slices.SortFunc(wpms, func(a, b FileResult) int {
 			if a.WPM < b.WPM {
-				return -1
+				return 1
 			}
 			if a.WPM > b.WPM {
-				return 1
+				return -1
 			}
 
 			return 0
 		})
 
-		for _, r := range wpms {
-			fmt.Printf("%s: %.2f WPM\n", r.File, r.WPM)
+		wpms_json, err := json.MarshalIndent(wpms, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshaling wpms: %w", err)
+		}
+
+		err = os.WriteFile("wpms.json", wpms_json, 0644)
+		if err != nil {
+			return fmt.Errorf("writing wpms.json: %w", err)
 		}
 
 		return nil
