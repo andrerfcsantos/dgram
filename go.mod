@@ -1,9 +1,11 @@
 module dgram
 
-go 1.23
+go 1.24.0
 
 require (
-	github.com/deepgram/deepgram-go-sdk v1.6.2
+	github.com/andrerfcsantos/deepgram-go-captions v0.1.0
+	github.com/deepgram/deepgram-go-sdk v1.8.2
+	github.com/go-echarts/go-echarts/v2 v2.5.0
 	github.com/muesli/go-app-paths v0.2.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
@@ -15,7 +17,6 @@ require (
 	github.com/dvonthenen/websocket v1.5.1-dyv.2 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/go-echarts/go-echarts/v2 v2.5.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gorilla/schema v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

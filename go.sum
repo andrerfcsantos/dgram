@@ -1,3 +1,5 @@
+github.com/andrerfcsantos/deepgram-go-captions v0.1.0 h1:Yns6QUgjCfUX7WWKbFJfVODgpNBWv9/Mr8PcY+afnj0=
+github.com/andrerfcsantos/deepgram-go-captions v0.1.0/go.mod h1:yDgom1VqwgbVOhLSD29FYEB5dBAg9nsdmry7MpL9Gjo=
 github.com/aws/aws-sdk-go v1.38.20/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/aws/aws-sdk-go v1.55.6 h1:cSg4pvZ3m8dgYcgqB97MrcdjUmZ1BeMYKUxMMB89IPk=
 github.com/aws/aws-sdk-go v1.55.6/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
@@ -6,8 +8,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deepgram/deepgram-go-sdk v1.6.2 h1:kKeDC9cghQU9g4a4OFP2R0UdnFHOE6kRuTiw1l9TzYY=
-github.com/deepgram/deepgram-go-sdk v1.6.2/go.mod h1:il+6HLmvxa47EG12LG6VwzaHcyI8Lo+yfBsOcDq3R8s=
+github.com/deepgram/deepgram-go-sdk v1.8.2 h1:+Jy5wIP37E3DVVpEj7XEjAEclG5zMtvr0HuWrVE73bk=
+github.com/deepgram/deepgram-go-sdk v1.8.2/go.mod h1:il+6HLmvxa47EG12LG6VwzaHcyI8Lo+yfBsOcDq3R8s=
 github.com/disintegration/imaging v1.6.2/go.mod h1:44/5580QXChDfwIclfc/PCwrr44amcmDAg8hxG0Ewe4=
 github.com/dvonthenen/websocket v1.5.1-dyv.2 h1:OXlWJJkeHt8k4+MEI0Y8SQjY2ihHYD2z/tI7sZZfsnA=
 github.com/dvonthenen/websocket v1.5.1-dyv.2/go.mod h1:q2GbopbpFJvBP4iqVvqwwahVmvu2HnCfdqCWDoQVKMM=

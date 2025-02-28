@@ -6,6 +6,8 @@ import (
 	"dgram/lib/fsys"
 	"encoding/json"
 	"fmt"
+	"github.com/andrerfcsantos/deepgram-go-captions/converters"
+	"github.com/andrerfcsantos/deepgram-go-captions/renderers"
 	api "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
 	interfacesv1 "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest/interfaces"
 	interfaces "github.com/deepgram/deepgram-go-sdk/pkg/client/interfaces"
@@ -23,6 +25,12 @@ import (
 
 var (
 	cfg *config.Config
+)
+
+const (
+	audioDirectory         = ".audio"
+	transcriptionDirectory = ".transcriptions"
+	graphsDirectory        = ".graphs"
 )
 
 func filesFromGlobs(globs []string) ([]string, error) {
@@ -79,17 +87,23 @@ func (f FilePath) Exists() bool {
 func audioForFile(file FilePath) (FilePath, error) {
 	isVideo := slices.Contains(VideoExtensions, file.Ext())
 	if isVideo {
+		dir := filepath.Join(file.Dir(), audioDirectory)
 		for _, ext := range AudioExtensions {
-			audioFile := FilePath(filepath.Join(file.Dir(), file.Base()+ext))
+			audioFile := FilePath(filepath.Join(dir, file.Base()+ext))
 			if audioFile.Exists() {
 				return audioFile, nil
 			}
 		}
 
-		audioPath := FilePath(filepath.Join(file.Dir(), file.Base()+".mp3"))
+		err := os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			return "", fmt.Errorf("creating audio directory %q: %w", dir, err)
+		}
+
+		audioPath := FilePath(filepath.Join(dir, file.Base()+".mp3"))
 
 		fmt.Printf("Converting %q to %q\n", file, audioPath)
-		err := ffmpeg.
+		err = ffmpeg.
 			Input(string(file)).
 			Output(string(audioPath)).
 			OverWriteOutput().
@@ -113,7 +127,8 @@ func audioForFile(file FilePath) (FilePath, error) {
 
 func ProcessFile(dg *api.Client, file FilePath) (*interfacesv1.PreRecordedResponse, error) {
 
-	transcript := FilePath(filepath.Join(file.Dir(), file.Base()+"_response.json"))
+	transcriptDir := filepath.Join(file.Dir(), transcriptionDirectory)
+	transcript := FilePath(filepath.Join(transcriptDir, file.Base()+"_response.json"))
 	if transcript.Exists() {
 		fmt.Printf("Transcript file %q already exists, using it\n", transcript)
 		var r interfacesv1.PreRecordedResponse
@@ -169,6 +184,11 @@ func ProcessFile(dg *api.Client, file FilePath) (*interfacesv1.PreRecordedRespon
 		return nil, fmt.Errorf("marshaling file response: %w", err)
 	}
 
+	err = os.MkdirAll(transcriptDir, os.ModePerm)
+	if err != nil {
+		return nil, fmt.Errorf("creating transcript directory %q: %w", transcriptDir, err)
+	}
+
 	err = os.WriteFile(string(transcript), data, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("writing transcript file %q: %w", transcript, err)
@@ -209,6 +229,23 @@ var transcribeCmd = &cobra.Command{
 			err = CreateGraph(r, fp)
 			if err != nil {
 				return fmt.Errorf("creating graph: %w", err)
+			}
+
+			srtPath := filepath.Join(fp.Dir(), fp.Base()+".srt")
+
+			if !fsys.FileExists(srtPath) {
+				conv := converters.NewDeepgramConverter(r)
+				srt, err := renderers.SRT(conv)
+				if err != nil {
+					return fmt.Errorf("rendering SRT for %s: %w", file, err)
+				}
+
+				err = os.WriteFile(srtPath, []byte(srt), 0644)
+				if err != nil {
+					return fmt.Errorf("writing SRT file %q: %w", srtPath, err)
+				}
+			} else {
+				fmt.Printf("SRT file %q already exists, skipping\n", srtPath)
 			}
 
 			nWords := 0
@@ -282,7 +319,13 @@ func CreateGraph(r *interfacesv1.PreRecordedResponse, file FilePath) error {
 	bar.SetXAxis(generateMinutesSeries(r)).
 		AddSeries("Words", generateWordCountSeries(r))
 
-	f, err := os.Create(filepath.Join(file.Dir(), file.Base()+"_graph.html"))
+	dir := filepath.Join(file.Dir(), graphsDirectory)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("creating graphs directory: %w", err)
+	}
+
+	f, err := os.Create(filepath.Join(dir, file.Base()+"_graph.html"))
 	if err != nil {
 		return fmt.Errorf("creating graph file: %w", err)
 	}
