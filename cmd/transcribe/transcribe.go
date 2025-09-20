@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 )
 
 var (
@@ -211,49 +212,96 @@ var transcribeCmd = &cobra.Command{
 		}
 
 		dg, err := getDgClient(cfg.GetString("apikey"))
+		if err != nil {
+			return fmt.Errorf("creating deepgram client: %w", err)
+		}
 
 		type FileResult struct {
 			File string  `json:"file"`
 			WPM  float64 `json:"wpm"`
 		}
 
+		type JobResult struct {
+			FileResult FileResult
+			Error      error
+		}
+
+		const maxWorkers = 4
+		jobs := make(chan string, len(files))
+		results := make(chan JobResult, len(files))
+
+		var wg sync.WaitGroup
+
+		// Start worker goroutines
+		for i := 0; i < maxWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for file := range jobs {
+					fp := FilePath(file)
+					r, err := ProcessFile(dg, fp)
+					if err != nil {
+						results <- JobResult{Error: fmt.Errorf("processing file %q: %w", file, err)}
+						continue
+					}
+
+					err = CreateGraph(r, fp)
+					if err != nil {
+						results <- JobResult{Error: fmt.Errorf("creating graph: %w", err)}
+						continue
+					}
+
+					srtPath := filepath.Join(fp.Dir(), fp.Base()+".srt")
+
+					if !fsys.FileExists(srtPath) {
+						conv := converters.NewDeepgramConverter(r)
+						srt, err := renderers.SRT(conv)
+						if err != nil {
+							results <- JobResult{Error: fmt.Errorf("rendering SRT for %s: %w", file, err)}
+							continue
+						}
+
+						err = os.WriteFile(srtPath, []byte(srt), 0644)
+						if err != nil {
+							results <- JobResult{Error: fmt.Errorf("writing SRT file %q: %w", srtPath, err)}
+							continue
+						}
+					} else {
+						fmt.Printf("SRT file %q already exists, skipping\n", srtPath)
+					}
+
+					nWords := 0
+					for _, c := range r.Results.Channels {
+						nWords += len(c.Alternatives[0].Words)
+					}
+
+					wpm := float64(nWords) / (r.Metadata.Duration / 60)
+					results <- JobResult{FileResult: FileResult{File: file, WPM: wpm}}
+				}
+			}()
+		}
+
+		// Send jobs to workers
+		go func() {
+			defer close(jobs)
+			for _, file := range files {
+				jobs <- file
+			}
+		}()
+
+		// Wait for all workers to finish
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		// Collect results
 		wpms := make([]FileResult, 0, len(files))
-
-		for _, file := range files {
-			fp := FilePath(file)
-			r, err := ProcessFile(dg, fp)
-			if err != nil {
-				return fmt.Errorf("processing file %q: %w", file, err)
+		for result := range results {
+			if result.Error != nil {
+				return result.Error
 			}
-
-			err = CreateGraph(r, fp)
-			if err != nil {
-				return fmt.Errorf("creating graph: %w", err)
-			}
-
-			srtPath := filepath.Join(fp.Dir(), fp.Base()+".srt")
-
-			if !fsys.FileExists(srtPath) {
-				conv := converters.NewDeepgramConverter(r)
-				srt, err := renderers.SRT(conv)
-				if err != nil {
-					return fmt.Errorf("rendering SRT for %s: %w", file, err)
-				}
-
-				err = os.WriteFile(srtPath, []byte(srt), 0644)
-				if err != nil {
-					return fmt.Errorf("writing SRT file %q: %w", srtPath, err)
-				}
-			} else {
-				fmt.Printf("SRT file %q already exists, skipping\n", srtPath)
-			}
-
-			nWords := 0
-			for _, c := range r.Results.Channels {
-				nWords += len(c.Alternatives[0].Words)
-			}
-
-			wpms = append(wpms, FileResult{File: file, WPM: float64(nWords) / (r.Metadata.Duration / 60)})
+			wpms = append(wpms, result.FileResult)
 		}
 
 		slices.SortFunc(wpms, func(a, b FileResult) int {
