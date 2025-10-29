@@ -6,6 +6,13 @@ import (
 	"dgram/lib/fsys"
 	"encoding/json"
 	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
+
 	"github.com/andrerfcsantos/deepgram-go-captions/converters"
 	"github.com/andrerfcsantos/deepgram-go-captions/renderers"
 	api "github.com/deepgram/deepgram-go-sdk/pkg/api/listen/v1/rest"
@@ -16,12 +23,6 @@ import (
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/spf13/cobra"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
-	"math"
-	"os"
-	"path/filepath"
-	"slices"
-	"strings"
-	"sync"
 )
 
 var (
@@ -296,10 +297,12 @@ var transcribeCmd = &cobra.Command{
 		}()
 
 		// Collect results
+		errors := make([]JobResult, 0)
 		wpms := make([]FileResult, 0, len(files))
 		for result := range results {
 			if result.Error != nil {
-				return result.Error
+				errors = append(errors, result)
+				continue
 			}
 			wpms = append(wpms, result.FileResult)
 		}
@@ -325,6 +328,12 @@ var transcribeCmd = &cobra.Command{
 			return fmt.Errorf("writing wpms.json: %w", err)
 		}
 
+		if len(errors) > 0 {
+			fmt.Println("Some errors occurred during processing these files:")
+			for _, e := range errors {
+				fmt.Printf("  - %v (%v)\n", e.FileResult.File, e.Error)
+			}
+		}
 		return nil
 	},
 }
