@@ -240,6 +240,13 @@ var transcribeCmd = &cobra.Command{
 				defer wg.Done()
 				for file := range jobs {
 					fp := FilePath(file)
+
+					// Skip files that are currently being downloaded
+					if fsys.IsBeingDownloaded(string(fp)) {
+						fmt.Printf("Skipping %q - file is currently being downloaded\n", file)
+						continue
+					}
+
 					r, err := ProcessFile(dg, fp)
 					if err != nil {
 						results <- JobResult{Error: fmt.Errorf("processing file %q: %w", file, err)}
